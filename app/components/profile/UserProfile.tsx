@@ -13,8 +13,8 @@ export default function UserProfile({ user, myPlayers }: { user: any; myPlayers:
           <AvatarImage src={user.user_metadata.avatar_url} alt="avatar" />
           <AvatarFallback>{user.email?.[0]?.toUpperCase()}</AvatarFallback>
         </Avatar>
-        <div>
-          <CardTitle className="text-3xl">{user.email}</CardTitle>
+        <div className="overflow-hidden">
+          <CardTitle className="text-3xl truncate">{user.email}</CardTitle>
           <CardDescription>Member ID: {user.id}</CardDescription>
         </div>
       </CardHeader>
