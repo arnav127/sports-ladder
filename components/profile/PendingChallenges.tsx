@@ -55,9 +55,9 @@ export default function PendingChallenges({
 
           return (
             <div key={c.id} className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <div className="font-semibold">
-                  <Badge variant={getBadgeVariant(status)} className={status === 'Challenged' ? 'bg-blue-500' : ''}>
+              <div className="flex justify-center">
+                <div className="font-semibold text-sm">
+                  <Badge variant={getBadgeVariant(status)} className={status === 'Challenged' ? 'bg-blue-500' : 'text-sx'}>
                     {status}
                   </Badge>{' '}
                   • {c.player1_id.full_name} vs {c.player2_id.full_name}

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Image from 'next/image'
+import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 
 export default function Login() {
@@ -13,18 +14,18 @@ export default function Login() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="w-full max-w-md p-8 bg-white rounded shadow">
-        <h1 className="text-2xl font-bold mb-4">Sign in</h1>
+    <div className="flex h-screen items-center justify-center rounded">
+      <div className="w-full max-w-md p-8 bg-background rounded shadow-lg">
+        <h1 className="scroll-m-20 text-3xl mt-1 font-bold tracking-tight text-shadow-sm text-center mb-4">Sign in</h1>
         <p className="text-sm text-gray-600 mb-6">Sign in with your Google account to view your ladders and profile.</p>
-        <button
+        <Button
           onClick={signInWithGoogle}
-          className="w-full flex items-center justify-center gap-2 border border-gray-200 px-4 py-2 rounded hover:bg-gray-50"
+          className="w-full flex items-center justify-center gap-2"
           disabled={loading}
         > 
           <Image src="/google.svg" alt="Google" width={20} height={20} />
           <span>{loading ? 'Redirecting...' : 'Continue with Google'}</span>
-        </button>
+        </Button>
         <p className="text-xs text-gray-500 mt-4">Only Google sign-in is supported for accessing private ladders.</p>
       </div>
     </div>

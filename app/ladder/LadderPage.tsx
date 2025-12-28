@@ -206,7 +206,7 @@ export default function LadderPage() {
       <aside className="md:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Sports</CardTitle>
+            <CardTitle className='text-center text-2xl font-bold text-shadow-sm'>Sports</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -215,7 +215,7 @@ export default function LadderPage() {
                   <Button
                     variant={selectedSport?.id === s.id ? 'default' : 'secondary'}
                     onClick={() => setSelectedSport(s)}
-                    className="w-full justify-start"
+                    className="w-full justify-start font-bold"
                   >
                     {s.name}
                   </Button>

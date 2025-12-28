@@ -28,10 +28,10 @@ export default function RankingsTable({
       <TableCaption>{players.length === 0 ? 'No players yet.' : 'A list of players in the ladder.'}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead>Rank</TableHead>
-          <TableHead>Player</TableHead>
-          <TableHead className="text-right">Rating</TableHead>
-          <TableHead className="text-right">Matches</TableHead>
+          <TableHead className='font-bold'>Rank</TableHead>
+          <TableHead className='font-bold'>Player</TableHead>
+          <TableHead className="text-right font-bold">Rating</TableHead>
+          <TableHead className="text-right font-bold">Matches</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>

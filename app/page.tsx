@@ -231,48 +231,16 @@ export default function Home() {
 
   return (
     <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-      <main className="md:col-span-2 space-y-6">
-        {sports.length > 0 ? (
-          <Tabs defaultValue={sports[0].id} className="w-full">
-            <TabsList className="border">
-              {sports.map((s) => (
-                <TabsTrigger
-                  key={s.id}
-                  value={s.id}
-                  className="data-[state=inactive]:bg-primary/10 data-[state=inactive]:text-primary"
-                >
-                  {s.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {sports.map(s => (
-              <TabsContent key={s.id} value={s.id}>
-                <LadderList
-                  sports={[s]}
-                  topLists={topLists}
-                  challengeLists={challengeLists}
-                  loadingLists={loadingLists}
-                  submitting={submitting}
-                  handleChallenge={handleChallenge}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        ) : (
-          <p className="text-muted-foreground">No sports available.</p>
-        )}
-      </main>
-
-      <aside className="md:col-span-1 space-y-6">
-        <Card>
+      <aside className="md:col-span-1 space-y-6 md:order-last">
+        <Card className='shadow-lg'>
           <CardHeader>
-            <CardTitle>Join a Ladder</CardTitle>
+            <CardTitle className="text-center text-shadow font-bold text-lg">Join a Ladder</CardTitle>
           </CardHeader>
           <CardContent>
             {!user ? (
               <div className="text-center">
                 <p className="mb-4 text-sm text-muted-foreground">You need to sign in to join a ladder.</p>
-                <Button onClick={() => router.push('/login')}>Sign in</Button>
+                <Button onClick={() => router.push('/login')} className='shadow-sm font-bold'>Sign in</Button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -307,6 +275,38 @@ export default function Home() {
           <PendingChallenges challenges={pendingChallenges} currentUserIds={userProfileIds} />
         )}
       </aside>
+
+      <main className="md:col-span-2 space-y-6">
+        {sports.length > 0 ? (
+          <Tabs defaultValue={sports[0].id} className="w-full">
+            <TabsList className='shadow-sm'>
+              {sports.map((s) => (
+                <TabsTrigger
+                  key={s.id}
+                  value={s.id}
+                  className='font-bold'
+                >
+                  {s.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {sports.map(s => (
+              <TabsContent key={s.id} value={s.id}>
+                <LadderList
+                  sports={[s]}
+                  topLists={topLists}
+                  challengeLists={challengeLists}
+                  loadingLists={loadingLists}
+                  submitting={submitting}
+                  handleChallenge={handleChallenge}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <p className="text-muted-foreground">No sports available.</p>
+        )}
+      </main>
     </div>
   )
 }

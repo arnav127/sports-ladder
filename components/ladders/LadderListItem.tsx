@@ -25,15 +25,15 @@ export default function LadderListItem({
   return (
     <>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between text-2xl font-bold">
+        <CardTitle className="flex items-center justify-between scroll-m-20 text-3xl font-semibold tracking-tight">
           <span>{sport.name}</span>
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="outline" size="sm" className='scroll-m-20 text-lg font-semibold tracking-tight'>
             <a href={`/ladder?sport=${sport.id}`}>View ladder</a>
           </Button>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Top 5 Players</h3>
+        <h3 className="leading-7 [&:not(:first-child)]:mt-6">Top 5 Players</h3>
         <Table>
           <TableBody>
             {(topList || []).map((p: any) => (
@@ -85,6 +85,7 @@ export default function LadderListItem({
                     <TableCell className="text-right">
                       <Button
                         variant="default"
+                        className='shadow-sm font-bold'
                         onClick={() => {
                           const name = p.full_name ?? p.user_metadata?.full_name ?? 'this player'
                           if (!window.confirm(`Challenge ${name}? Are you sure you want to send this challenge?`)) return
