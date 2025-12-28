@@ -59,7 +59,7 @@ export async function POST(req: Request, { params }: any) {
       data: { matchId: match.id, action: 'confirm' },
     })
 
-    return NextResponse.redirect(origin)
+    return NextResponse.redirect(origin, { status: 303 })
   } else {
     // opponent rejected the reported result: mark disputed and clear tentative winner and reporter
     const { error } = await supabase.from('matches').update({ status: 'PENDING', winner_id: null, reported_by: null }).eq('id', id)
@@ -69,6 +69,6 @@ export async function POST(req: Request, { params }: any) {
       name: 'match.verify',
       data: { matchId: match.id, action: 'dispute' },
     })
-    return NextResponse.redirect(origin)
+    return NextResponse.redirect(origin, { status: 303 })
   }
 }

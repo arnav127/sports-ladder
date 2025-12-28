@@ -64,7 +64,7 @@ export async function POST(req: NextRequest, { params }: any) {
       data: { matchId: updated.id, action: 'accept' },
     })
     const origin = process.env.PUBLIC_SITE_URL ?? new URL(req.url).origin
-    return NextResponse.redirect(origin)
+    return NextResponse.redirect(origin, { status: 303 })
   }
 
   if (action === 'reject') {
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, { params }: any) {
       data: { matchId: updated.id, action: 'reject' },
     })
     const origin = process.env.PUBLIC_SITE_URL ?? new URL(req.url).origin
-    return NextResponse.redirect(origin)
+    return NextResponse.redirect(origin, { status: 303 })
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

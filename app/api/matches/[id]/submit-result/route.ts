@@ -44,7 +44,7 @@ async function handleResultSubmission(
     data: { matchId: match.id },
   })
 
-  return NextResponse.redirect(origin)
+  return NextResponse.redirect(origin, { status: 303 })
 }
 
 export async function GET(req: Request, { params }: any) {
