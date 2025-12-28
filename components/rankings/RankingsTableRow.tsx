@@ -19,9 +19,9 @@ const RankingsTableRow = React.forwardRef<
   }
 >(({ player, rank, isChallengable, submittingChallenge, handleChallenge, selectedSport, user }, ref) => {
   return (
-    <TableRow ref={ref} className={isChallengable ? 'bg-yellow-50' : ''}>
-      <TableCell>
-        <Badge variant={rank <= 10 ? 'default' : 'secondary'}>{rank}</Badge>
+    <TableRow ref={ref} className={isChallengable ? 'bg-red-50 dark:bg-red-950 dark:hover:bg-red-700/30' : ''}>
+      <TableCell className={isChallengable ? 'bg-red-50/50 dark:bg-red-950/50 dark:hover:bg-red-700/30' : ''}>
+        <Badge variant={rank <= 10 ? 'default' : 'secondary'} className={isChallengable ? 'bg-red-400 hover:bg-red-400/80 dark:bg-red-800 dark:hover:bg-red-800/50' : ''}>{rank}</Badge>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-3">
@@ -45,6 +45,7 @@ const RankingsTableRow = React.forwardRef<
           <Button
             size="sm"
             variant="destructive"
+            className='font-bold'
             onClick={() => {
               const name = player.full_name ?? player.user_metadata?.full_name ?? 'this player'
               if (!window.confirm(`Challenge ${name}? Are you sure you want to send this challenge?`)) return
