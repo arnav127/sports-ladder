@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { inngest } from '@/lib/inngest/client'
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
 
 async function handleResultSubmission(
   id: string,
@@ -15,6 +11,7 @@ async function handleResultSubmission(
   // recorded reporter defaults to the winner if not provided (useful for token-based submissions)
   const reporter = reported_by ?? winner_profile_id
 
+  const supabase = await createClient()
   const matchRes = await supabase.from('matches').select('*').eq('id', id).limit(1).single()
   if (!matchRes.data) return NextResponse.json({ error: 'Match not found' }, { status: 404 })
   const match = matchRes.data as any

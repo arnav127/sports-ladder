@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { inngest } from '@/lib/inngest/client'
+import { createClient } from '@/lib/supabase/server'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
 
 export async function GET(req: NextRequest, { params }: any) {
+    const supabase = await createClient()
   const { id } = (await params) as { id: string }
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action')
