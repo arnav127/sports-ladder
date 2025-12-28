@@ -37,17 +37,20 @@ export const sendChallengeEmail = inngest.createFunction(
 
     if (!match) return;
 
-    // Fetch opponent email (player2)
-    const opponent = await step.run("fetch-opponent", async () => {
+    // Fetch challenger and opponent profiles in one go
+    const { challengerProfile, opponent } = await step.run("fetch-profiles", async () => {
       const { data } = await supabase
         .from("player_profiles_view")
-        .select("id, user_id, user_email, full_name")
-        .eq("id", match.player2_id)
-        .single();
-      return data;
+        .select("id, user_id, user_email, full_name") // Select all necessary fields
+        .in("id", [match.player1_id, match.player2_id]); // Fetch both players
+
+      const challengerProfile = data?.find((p) => p.id === match.player1_id);
+      const opponent = data?.find((p) => p.id === match.player2_id);
+
+      return { challengerProfile, opponent };
     });
 
-    if (!opponent?.user_email) return;
+    if (!opponent?.user_email) return
 
     await step.run("send-email", async () => {
       const acceptUrl = `${PUBLIC_SITE_URL}/api/matches/${match.id}/action?action=accept&token=${match.action_token}`;
@@ -56,9 +59,9 @@ export const sendChallengeEmail = inngest.createFunction(
       const msg = {
         to: opponent.user_email,
         from: FROM_EMAIL, // Update this to your verified sender
-        subject: `You were challenged in ${match.sport_id}`,
+        subject: `You were challenged in ${match.sport_id}`, // TODO: replace with sport name
         html: `
-          <p><strong>${match.player1_id}</strong> has challenged you in the ladder.</p>
+          <p><strong>${challengerProfile?.full_name || match.player1_id}</strong> has challenged you in the ladder.</p>
           <p>${match.message ?? ""}</p>
           <p>
  <a href="${acceptUrl}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">Accept Challenge</a>
