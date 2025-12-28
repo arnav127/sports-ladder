@@ -94,6 +94,8 @@ DECLARE
   K constant integer := 32;
   old1 integer;
   old2 integer;
+  p1_already boolean;
+  p2_already boolean;
 BEGIN
   -- Lock match row
   SELECT * INTO m FROM public.matches WHERE id = match_uuid FOR UPDATE;
@@ -116,6 +118,24 @@ BEGIN
 
   IF p1 IS NULL OR p2 IS NULL THEN
     RAISE EXCEPTION 'player not found';
+  END IF;
+
+  -- Check if this match already has ratings_history for each player
+  SELECT EXISTS (
+    SELECT 1 FROM public.ratings_history rh WHERE rh.match_id = match_uuid AND rh.player_profile_id = m_rec.player1_id
+  ) INTO p1_already;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.ratings_history rh WHERE rh.match_id = match_uuid AND rh.player_profile_id = m_rec.player2_id
+  ) INTO p2_already;
+
+  -- If both players already processed for this match, skip entirely
+  IF p1_already AND p2_already THEN
+    RETURN jsonb_build_object(
+      'match_id', m.id,
+      'player1', jsonb_build_object('id', p1.id, 'old', old1, 'new', new1),
+      'player2', jsonb_build_object('id', p2.id, 'old', old2, 'new', new2)
+    );
   END IF;
 
   -- Ensure default rating if NULL
@@ -184,6 +204,163 @@ $$;
 
 
 ALTER FUNCTION "public"."reactivate_profile_on_match"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."recompute_all_elos_and_history"("in_starting_rating" integer DEFAULT 1000, "in_k_factor" numeric DEFAULT 32) RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  ratings_map     jsonb := '{}'::jsonb; -- player_id -> rating
+  played_map      jsonb := '{}'::jsonb; -- player_id -> matches_played (integer)
+  m_rec           RECORD;
+  player1_rating  numeric;
+  player2_rating  numeric;
+  expected1       numeric;
+  expected2       numeric;
+  actual1         numeric;
+  actual2         numeric;
+  new_rating1     numeric;
+  new_rating2     numeric;
+  old_rating1     integer;
+  old_rating2     integer;
+  exists_p1       boolean;
+  exists_p2       boolean;
+  cur_played      integer;
+BEGIN
+  -- Ensure ratings_history table exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'ratings_history'
+  ) THEN
+    RAISE EXCEPTION 'ratings_history table not found in public schema';
+  END IF;
+
+  -- Reset all player_profiles to defaults before recompute
+  UPDATE public.player_profiles
+  SET rating = in_starting_rating,
+      matches_played = 0
+  WHERE true;
+
+  -- Initialize ratings_map and played_map from current player_profiles (now reset to defaults)
+  FOR m_rec IN
+    SELECT id, COALESCE(rating, in_starting_rating) AS rating, COALESCE(matches_played, 0) AS matches_played
+    FROM public.player_profiles
+  LOOP
+    ratings_map := jsonb_set(ratings_map, ARRAY[m_rec.id::text], to_jsonb(m_rec.rating));
+    played_map  := jsonb_set(played_map,  ARRAY[m_rec.id::text], to_jsonb(m_rec.matches_played));
+  END LOOP;
+
+  -- Truncate ratings_history to rewrite it
+  TRUNCATE TABLE public.ratings_history RESTART IDENTITY;
+
+  -- Iterate matches chronologically
+  FOR m_rec IN
+    SELECT id, created_at, player1_id, player2_id, winner_id
+    FROM public.matches
+    WHERE player1_id IS NOT NULL AND player2_id IS NOT NULL
+      AND winner_id IS NOT NULL
+    ORDER BY COALESCE(created_at, now()), id
+  LOOP
+    -- Fetch current ratings from map or default
+    player1_rating := COALESCE( (ratings_map ->> m_rec.player1_id::text)::numeric, in_starting_rating );
+    player2_rating := COALESCE( (ratings_map ->> m_rec.player2_id::text)::numeric, in_starting_rating );
+
+    -- Check if history already contains this match for these players
+    SELECT EXISTS (
+      SELECT 1 FROM public.ratings_history rh WHERE rh.player_profile_id = m_rec.player1_id AND rh.match_id = m_rec.id
+    ) INTO exists_p1;
+
+    SELECT EXISTS (
+      SELECT 1 FROM public.ratings_history rh WHERE rh.player_profile_id = m_rec.player2_id AND rh.match_id = m_rec.id
+    ) INTO exists_p2;
+
+    -- Save old integer ratings for history
+    old_rating1 := ROUND(player1_rating)::integer;
+    old_rating2 := ROUND(player2_rating)::integer;
+
+    -- Expected scores
+    expected1 := 1.0 / (1.0 + power(10.0, (player2_rating - player1_rating) / 400.0));
+    expected2 := 1.0 / (1.0 + power(10.0, (player1_rating - player2_rating) / 400.0));
+
+    -- Actual scores
+    IF m_rec.winner_id = m_rec.player1_id THEN
+      actual1 := 1.0; actual2 := 0.0;
+    ELSIF m_rec.winner_id = m_rec.player2_id THEN
+      actual1 := 0.0; actual2 := 1.0;
+    ELSE
+      actual1 := 0.5; actual2 := 0.5;
+    END IF;
+
+    -- Compute new ratings and update maps only for players without existing history for this match
+    IF NOT exists_p1 THEN
+      new_rating1 := player1_rating + in_k_factor * (actual1 - expected1);
+      new_rating1 := GREATEST(0, ROUND(new_rating1));
+      ratings_map := jsonb_set(ratings_map, ARRAY[m_rec.player1_id::text], to_jsonb(new_rating1));
+
+      -- increment played count for player1
+      cur_played := COALESCE( (played_map ->> m_rec.player1_id::text)::integer, 0 );
+      cur_played := cur_played + 1;
+      played_map := jsonb_set(played_map, ARRAY[m_rec.player1_id::text], to_jsonb(cur_played));
+    ELSE
+      new_rating1 := ROUND(player1_rating);
+    END IF;
+
+    IF NOT exists_p2 THEN
+      new_rating2 := player2_rating + in_k_factor * (actual2 - expected2);
+      new_rating2 := GREATEST(0, ROUND(new_rating2));
+      ratings_map := jsonb_set(ratings_map, ARRAY[m_rec.player2_id::text], to_jsonb(new_rating2));
+
+      -- increment played count for player2
+      cur_played := COALESCE( (played_map ->> m_rec.player2_id::text)::integer, 0 );
+      cur_played := cur_played + 1;
+      played_map := jsonb_set(played_map, ARRAY[m_rec.player2_id::text], to_jsonb(cur_played));
+    ELSE
+      new_rating2 := ROUND(player2_rating);
+    END IF;
+
+    -- Insert history rows only for players that were not already recorded
+    IF NOT exists_p1 AND NOT exists_p2 THEN
+      INSERT INTO public.ratings_history(id, player_profile_id, match_id, old_rating, new_rating, delta, reason, created_at)
+      VALUES
+        (gen_random_uuid(), m_rec.player1_id, m_rec.id, old_rating1, new_rating1::integer, (new_rating1::integer - old_rating1), 'recomputed', now()),
+        (gen_random_uuid(), m_rec.player2_id, m_rec.id, old_rating2, new_rating2::integer, (new_rating2::integer - old_rating2), 'recomputed', now());
+    ELSIF NOT exists_p1 THEN
+      INSERT INTO public.ratings_history(id, player_profile_id, match_id, old_rating, new_rating, delta, reason, created_at)
+      VALUES
+        (gen_random_uuid(), m_rec.player1_id, m_rec.id, old_rating1, new_rating1::integer, (new_rating1::integer - old_rating1), 'recomputed', now());
+    ELSIF NOT exists_p2 THEN
+      INSERT INTO public.ratings_history(id, player_profile_id, match_id, old_rating, new_rating, delta, reason, created_at)
+      VALUES
+        (gen_random_uuid(), m_rec.player2_id, m_rec.id, old_rating2, new_rating2::integer, (new_rating2::integer - old_rating2), 'recomputed', now());
+    END IF;
+  END LOOP;
+
+  -- Persist final ratings back to player_profiles
+  WITH final_ratings AS (
+    SELECT (key::uuid) AS player_id, (value::text)::integer AS final_rating
+    FROM jsonb_each(ratings_map)
+  )
+  UPDATE public.player_profiles p
+  SET rating = fr.final_rating
+  FROM final_ratings fr
+  WHERE p.id = fr.player_id;
+
+  -- Persist matches_played back to player_profiles
+  WITH final_played AS (
+    SELECT (key::uuid) AS player_id, (value::text)::integer AS matches_played
+    FROM jsonb_each(played_map)
+  )
+  UPDATE public.player_profiles p
+  SET matches_played = fp.matches_played
+  FROM final_played fp
+  WHERE p.id = fp.player_id;
+
+  RETURN;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."recompute_all_elos_and_history"("in_starting_rating" integer, "in_k_factor" numeric) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."trigger_process_match_elo"() RETURNS "trigger"
@@ -649,6 +826,12 @@ GRANT ALL ON FUNCTION "public"."process_match_elo"("match_uuid" "uuid") TO "serv
 GRANT ALL ON FUNCTION "public"."reactivate_profile_on_match"() TO "anon";
 GRANT ALL ON FUNCTION "public"."reactivate_profile_on_match"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."reactivate_profile_on_match"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."recompute_all_elos_and_history"("in_starting_rating" integer, "in_k_factor" numeric) TO "anon";
+GRANT ALL ON FUNCTION "public"."recompute_all_elos_and_history"("in_starting_rating" integer, "in_k_factor" numeric) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."recompute_all_elos_and_history"("in_starting_rating" integer, "in_k_factor" numeric) TO "service_role";
 
 
 
