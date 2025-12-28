@@ -13,6 +13,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "extensions";
+
+
+
+
+
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
@@ -64,26 +78,6 @@ CREATE TYPE "public"."match_status" AS ENUM (
 
 
 ALTER TYPE "public"."match_status" OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."notify_matches"() RETURNS "trigger"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
-declare
-  payload jsonb;
-begin
-  payload := jsonb_build_object(
-    'action', TG_OP,
-    'table', TG_TABLE_NAME,
-    'data', to_jsonb(NEW)
-  );
-  perform pg_notify('matches_changes', payload::text);
-  return NEW;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."notify_matches"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."process_match_elo"("match_uuid" "uuid") RETURNS "jsonb"
@@ -171,6 +165,27 @@ $$;
 ALTER FUNCTION "public"."process_match_elo"("match_uuid" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."reactivate_profile_on_match"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  -- Reactivate player1 and player2 if they exist
+  IF NEW.player1_id IS NOT NULL THEN
+    UPDATE public.player_profiles SET deactivated = false WHERE id = NEW.player1_id;
+  END IF;
+
+  IF NEW.player2_id IS NOT NULL THEN
+    UPDATE public.player_profiles SET deactivated = false WHERE id = NEW.player2_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."reactivate_profile_on_match"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."trigger_process_match_elo"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -240,7 +255,8 @@ CREATE TABLE IF NOT EXISTS "public"."player_profiles" (
     "sport_id" "uuid",
     "rating" integer DEFAULT 1000,
     "matches_played" integer DEFAULT 0,
-    "created_at" timestamp without time zone DEFAULT "now"()
+    "created_at" timestamp without time zone DEFAULT "now"(),
+    "deactivated" boolean DEFAULT false NOT NULL
 );
 
 
@@ -259,7 +275,8 @@ CREATE OR REPLACE VIEW "public"."player_profiles_view" AS
     COALESCE(("u"."raw_user_meta_data" ->> 'full_name'::"text"), (("u"."raw_user_meta_data" -> 'user_metadata'::"text") ->> 'full_name'::"text"), ("u"."email")::"text") AS "full_name",
     COALESCE(("u"."raw_user_meta_data" ->> 'avatar_url'::"text"), (("u"."raw_user_meta_data" -> 'user_metadata'::"text") ->> 'avatar_url'::"text")) AS "avatar_url"
    FROM ("public"."player_profiles" "p"
-     LEFT JOIN "auth"."users" "u" ON (("p"."user_id" = "u"."id")));
+     LEFT JOIN "auth"."users" "u" ON (("p"."user_id" = "u"."id")))
+  WHERE (COALESCE("p"."deactivated", false) = false);
 
 
 ALTER VIEW "public"."player_profiles_view" OWNER TO "postgres";
@@ -335,6 +352,10 @@ CREATE INDEX "idx_matches_winner_id" ON "public"."matches" USING "btree" ("winne
 
 
 
+CREATE INDEX "idx_player_profiles_deactivated" ON "public"."player_profiles" USING "btree" ("deactivated");
+
+
+
 CREATE INDEX "idx_ratings_history_player_created" ON "public"."ratings_history" USING "btree" ("player_profile_id", "created_at" DESC);
 
 
@@ -343,7 +364,7 @@ CREATE OR REPLACE TRIGGER "matches_after_status_trigger" AFTER UPDATE OF "status
 
 
 
-CREATE OR REPLACE TRIGGER "trg_notify_matches" AFTER INSERT OR UPDATE ON "public"."matches" FOR EACH ROW EXECUTE FUNCTION "public"."notify_matches"();
+CREATE OR REPLACE TRIGGER "reactivate_profile_on_match_trigger" AFTER INSERT ON "public"."matches" FOR EACH ROW EXECUTE FUNCTION "public"."reactivate_profile_on_match"();
 
 
 
@@ -432,6 +453,12 @@ ALTER TABLE "public"."player_profiles" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
+
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -591,9 +618,24 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."notify_matches"() TO "anon";
-GRANT ALL ON FUNCTION "public"."notify_matches"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."notify_matches"() TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -601,6 +643,12 @@ REVOKE ALL ON FUNCTION "public"."process_match_elo"("match_uuid" "uuid") FROM PU
 GRANT ALL ON FUNCTION "public"."process_match_elo"("match_uuid" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."process_match_elo"("match_uuid" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."process_match_elo"("match_uuid" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."reactivate_profile_on_match"() TO "anon";
+GRANT ALL ON FUNCTION "public"."reactivate_profile_on_match"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."reactivate_profile_on_match"() TO "service_role";
 
 
 
@@ -613,6 +661,12 @@ GRANT ALL ON FUNCTION "public"."trigger_process_match_elo"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
+
+
+
+
+
+
 
 
 
