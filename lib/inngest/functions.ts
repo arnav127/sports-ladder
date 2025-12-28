@@ -25,18 +25,15 @@ export const sendChallengeEmail = inngest.createFunction(
   { event: "match.new" },
   async ({ event, step }) => {
     const { matchId } = event.data;
-
     const match = await step.run("fetch-match", async () => {
       const { data } = await supabase
         .from("matches")
-        .select("*")
+        .select("*, sport:sports(name)")
         .eq("id", matchId)
         .single();
       return data;
     });
-
     if (!match) return;
-
     // Fetch challenger and opponent profiles in one go
     const { challengerProfile, opponent } = await step.run("fetch-profiles", async () => {
       const { data } = await supabase
@@ -55,15 +52,15 @@ export const sendChallengeEmail = inngest.createFunction(
     await step.run("send-email", async () => {
       const acceptUrl = `${PUBLIC_SITE_URL}/api/matches/${match.id}/action?action=accept&token=${match.action_token}`;
       const rejectUrl = `${PUBLIC_SITE_URL}/api/matches/${match.id}/action?action=reject&token=${match.action_token}`;
-
+      const sportName = match.sport?.name || match.sport_id;
       const msg = {
         to: opponent.user_email,
         from: FROM_EMAIL, // Update this to your verified sender
-        subject: `You were challenged in ${match.sport_id}`, // TODO: replace with sport name
+        subject: `You were challenged in ${sportName}`, // TODO: replace with sport name
         html: `
           <p><strong>${challengerProfile?.full_name || match.player1_id}</strong> has challenged you in the ladder.</p>
           <p>${match.message ?? ""}</p>
-          <p>
+          <p>You were challenged in ${sportName}.</p><p>
  <a href="${acceptUrl}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">Accept Challenge</a>
  <a href="${rejectUrl}" style="background-color: #f44336; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; margin-left: 10px;">Reject Challenge</a>
  </p>
