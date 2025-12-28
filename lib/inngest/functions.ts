@@ -66,13 +66,7 @@ export const sendChallengeEmail = inngest.createFunction(
  </p>
         `,
       };
-      const { error, info } = await transporter.sendMail(msg)
-      if (error) {
-        console.error('Error sending email:', error);
-      } else {
-        console.log('Email sent:', info.response);
-      }
-      return { error, info };
+      await transporter.sendMail(msg);
     });
   }
 );
@@ -134,13 +128,7 @@ export const handleMatchAction = inngest.createFunction(
             html: challengerHtml,
           };
           await step.run("send-challenger-email", async () => {
-            const { error, info } = await transporter.sendMail(challengerMsg)
-            if (error) {
-              console.error('Error sending email:', error);
-            } else {
-              console.log('Email sent:', info.response);
-            }
-            return { error, info };
+            await transporter.sendMail(challengerMsg);
           });
 
           // Email to opponent (if available)
@@ -166,13 +154,7 @@ export const handleMatchAction = inngest.createFunction(
               html: opponentHtml,
             };
             await step.run("send-opponent-email", async () => {
-              const { error, info } = await transporter.sendMail(opponentMsg)
-              if (error) {
-                console.error('Error sending email:', error);
-              } else {
-                console.log('Email sent:', info.response);
-              }
-              return { error, info };
+              await transporter.sendMail(opponentMsg);
             });
           }
         } else {
@@ -186,13 +168,7 @@ export const handleMatchAction = inngest.createFunction(
             html,
           };
           await step.run("send-rejection-email", async () => {
-            const { error, info } = await transporter.sendMail(msg)
-            if (error) {
-              console.error('Error sending email:', error);
-            } else {
-              console.log('Email sent:', info.response);
-            }
-            return { error, info };
+            await transporter.sendMail(msg)
           });
         }
       });
@@ -249,13 +225,7 @@ export const handleMatchResult = inngest.createFunction(
  </p>
           `,
         };
-        const { error, info } = await transporter.sendMail(msg)
-        if (error) {
-          console.error('Error sending email:', error);
-        } else {
-          console.log('Email sent:', info.response);
-        }
-        return { error, info };
+        await transporter.sendMail(msg)
       });
     }
   }
@@ -306,13 +276,7 @@ export const handleMatchVerification = inngest.createFunction(
  `;
 
         const msg = { to: emails, from: FROM_EMAIL, subject, html };
-        const { error, info } = await transporter.sendMail(msg)
-        if (error) {
-          console.error('Error sending email:', error);
-        } else {
-          console.log('Email sent:', info.response);
-        }
-        return { error, info };
+        await transporter.sendMail(msg)
       });
     }
   }
