@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import UserProfile from '@/components/profile/UserProfile'
 import * as helpers from '@/lib/supabase/supabaseHelpers'
+import { PlayerProfile, PlayerProfileExtended, Sport } from '@/lib/types'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -26,11 +27,11 @@ export default async function ProfilePage() {
     supabase.from('sports').select('id, name'),
   ])
 
-  const sportMap = (sports || []).reduce((acc: any, s: any) => ({ ...acc, [s.id]: s.name }), {})
-  const profileRows = (profiles || []).map((p: any) => ({ ...p, sport_name: sportMap[p.sport_id] ?? p.sport_id }))
+  const sportMap = ((sports as Sport[]) || []).reduce((acc, s) => ({ ...acc, [s.id]: s.name }), {} as Record<string, string>)
+  const profileRows = ((profiles as PlayerProfile[]) || []).map((p) => ({ ...p, sport_name: sportMap[p.sport_id] ?? p.sport_id }))
 
   const myPlayers = await Promise.all(
-    profileRows.map(async (p: any) => {
+    profileRows.map(async (p): Promise<PlayerProfileExtended> => {
       const [stats, matches, rankInfo, pendingChallenges, ratingHistory] = await Promise.all([
         helpers.getProfileStats(p.id),
         helpers.getMatchesForProfile(p.id, 5),

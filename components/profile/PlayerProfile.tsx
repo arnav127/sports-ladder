@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PlayerProfileExtended } from '@/lib/types'
 
-export default function PlayerProfile({ player }: { player: any }) {
+export default function PlayerProfile({ player }: { player: PlayerProfileExtended }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-4">

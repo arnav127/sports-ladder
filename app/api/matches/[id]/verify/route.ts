@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { inngest } from '@/lib/inngest/client'
+import { Match } from '@/lib/types'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
   )
 }
 
-export async function POST(req: Request, { params }: any) {
+export async function POST(req: Request, { params }:  { params: Promise<{ id: string }> }) {
   // await params to support Next.js dynamic API behavior
   const supabase = await createClient()
   const { id } = (await params) as { id: string }
@@ -35,7 +36,7 @@ export async function POST(req: Request, { params }: any) {
 
   const matchRes = await supabase.from('matches').select('*').eq('id', id).limit(1).single()
   if (!matchRes.data) return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-  const match = matchRes.data as any
+  const match = matchRes.data as Match
 
   if (match.action_token !== token) return NextResponse.json({ error: 'Invalid token' }, { status: 403 })
 

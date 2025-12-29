@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { inngest } from '@/lib/inngest/client'
 import { createClient } from '@/lib/supabase/server'
+import { Match } from '@/lib/types'
 
 
 export async function GET(req: NextRequest) {
@@ -24,9 +25,9 @@ export async function GET(req: NextRequest) {
   )
 }
 
-export async function POST(req: NextRequest, { params }: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const supabase = await createClient()
-  const { id } = (await params) as { id: string }
+  const { id } = await params
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action')
   const token = searchParams.get('token')
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest, { params }: any) {
   // validate token if provided
   const matchRes = await supabase.from('matches').select('*').eq('id', id).limit(1).single()
   if (!matchRes.data) return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-  const match = matchRes.data as any
+  const match = matchRes.data as Match
 
   if (token) {
     if (match.action_token !== token) return NextResponse.json({ error: 'Invalid token' }, { status: 403 })

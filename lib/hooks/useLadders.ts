@@ -1,19 +1,20 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { Sport, PlayerProfile, Match, MatchWithPlayers } from '@/lib/types'
 
 export default function useLadders() {
-  const [sports, setSports] = useState<any[]>([])
+  const [sports, setSports] = useState<Sport[]>([])
 
   useEffect(() => {
     supabase
       .from('sports')
       .select('id, name')
       .order('name')
-      .then(res => setSports(res.data ?? []))
+      .then((res) => setSports((res.data as Sport[]) ?? []))
   }, [])
 
-  const getPlayersForSport = useCallback(async (sportId: string, limit?: number) => {
+  const getPlayersForSport = useCallback(async (sportId: string, limit?: number): Promise<PlayerProfile[]> => {
     // Use the view that joins `auth.users` so we can show email/avatar/name
     let query = supabase
       .from('player_profiles_view')
@@ -25,10 +26,10 @@ export default function useLadders() {
 
     const { data } = await query
 
-    return data ?? []
+    return (data as PlayerProfile[]) ?? []
   }, [])
 
-  const getUserProfileForSport = useCallback(async (userId: string, sportId: string) => {
+  const getUserProfileForSport = useCallback(async (userId: string, sportId: string): Promise<PlayerProfile | null> => {
     const { data } = await supabase
       .from('player_profiles')
       .select('id, user_id, sport_id, rating, matches_played')
@@ -36,7 +37,7 @@ export default function useLadders() {
       .eq('sport_id', sportId)
       .limit(1)
 
-    return (data && data[0]) ?? null
+    return (data && (data[0] as PlayerProfile)) ?? null
   }, [])
 
   const createChallenge = useCallback(
@@ -78,10 +79,10 @@ export default function useLadders() {
     return getRankForProfile(profileId, sportId)
   }, [])
 
-  const getPendingChallengesForUser = useCallback(async (userId: string) => {
+  const getPendingChallengesForUser = useCallback(async (userId: string): Promise<MatchWithPlayers[]> => {
     // Find all player profile ids for this user
     const { data: profiles } = await supabase.from('player_profiles').select('id').eq('user_id', userId)
-    const ids = (profiles || []).map((r: any) => r.id)
+    const ids = (profiles || []).map((r) => r.id)
     if (!ids.length) return []
 
     const { data } = await supabase
@@ -93,20 +94,21 @@ export default function useLadders() {
 
     if (!data) return []
 
+    const matches = data as Match[]
     // Resolve profile info for player ids
-    const idsInMatches = Array.from(new Set(data.flatMap((m: any) => [m.player1_id, m.player2_id].filter(Boolean))))
-    const profilesMap: Record<string, any> = {}
+    const idsInMatches = Array.from(new Set(matches.flatMap((m) => [m.player1_id, m.player2_id].filter(Boolean)))) as string[]
+    const profilesMap: Record<string, PlayerProfile> = {}
     if (idsInMatches.length) {
       const { data: profiles } = await supabase
         .from('player_profiles_view')
         .select('id, full_name, avatar_url, rating')
-        .in('id', idsInMatches as any)
-      ;(profiles || []).forEach((p: any) => {
-        profilesMap[p.id] = p
+        .in('id', idsInMatches)
+      ;(profiles || []).forEach((p) => {
+        profilesMap[p.id] = p as PlayerProfile
       })
     }
 
-    return (data || []).map((m: any) => ({
+    return matches.map((m) => ({
       ...m,
       player1_id: m.player1_id
         ? { id: m.player1_id, full_name: profilesMap[m.player1_id]?.full_name, avatar_url: profilesMap[m.player1_id]?.avatar_url, rating: profilesMap[m.player1_id]?.rating }
@@ -120,5 +122,23 @@ export default function useLadders() {
     }))
   }, [])
 
-  return { sports, getPlayersForSport, getUserProfileForSport, createChallenge, createMatch, getMatchesForProfile, getProfileStats, getRankForProfile, getPendingChallengesForUser }
+  const getAllPlayers = useCallback(async (): Promise<PlayerProfile[]> => {
+    const { data } = await supabase
+      .from('player_profiles_view')
+      .select('id, user_id, sport_id, rating, matches_played, user_email, user_metadata, full_name, avatar_url')
+      .order('rating', { ascending: false })
+
+    return (data as PlayerProfile[]) ?? []
+  }, [])
+
+  const getUserProfiles = useCallback(async (userId: string): Promise<PlayerProfile[]> => {
+    const { data } = await supabase
+      .from('player_profiles')
+      .select('id, user_id, sport_id, rating, matches_played')
+      .eq('user_id', userId)
+
+    return (data as PlayerProfile[]) ?? []
+  }, [])
+
+  return { sports, getPlayersForSport, getUserProfileForSport, createChallenge, createMatch, getMatchesForProfile, getProfileStats, getRankForProfile, getPendingChallengesForUser, getAllPlayers, getUserProfiles }
 }

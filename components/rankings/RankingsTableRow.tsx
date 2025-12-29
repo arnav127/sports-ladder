@@ -4,18 +4,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { RankedPlayerProfile, Sport } from '@/lib/types'
+import { User } from '@supabase/supabase-js'
 import React from 'react'
 
 const RankingsTableRow = React.forwardRef<
   HTMLTableRowElement,
   {
-    player: any
+    player: RankedPlayerProfile
     rank: number
     isChallengable: boolean
     submittingChallenge: string | null
     handleChallenge: (opponentProfileId: string) => void
-    selectedSport: any
-    user: any
+    selectedSport: Sport | null
+    user: User
   }
 >(({ player, rank, isChallengable, submittingChallenge, handleChallenge, selectedSport, user }, ref) => {
   return (
@@ -26,15 +28,15 @@ const RankingsTableRow = React.forwardRef<
       <TableCell>
         <div className="flex items-center gap-3">
           <Avatar>
-            <AvatarImage src={player.avatar_url ?? player.user_metadata?.avatar_url} />
+            <AvatarImage src={player.avatar_url} />
             <AvatarFallback>
-              {(player.full_name ?? player.user_metadata?.full_name ?? player.user_email ?? player.user_id ?? '')
+              {(player.full_name ?? player.user_email ?? player.user_id ?? '')
                 .toString()[0]
                 ?.toUpperCase() ?? 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="font-medium">
-            {player.full_name ?? player.user_metadata?.full_name ?? player.user_email ?? `Player ${rank}`}
+            {player.full_name ?? player.user_email ?? `Player ${rank}`}
           </div>
         </div>
       </TableCell>
@@ -47,7 +49,7 @@ const RankingsTableRow = React.forwardRef<
             variant="destructive"
             className='font-bold'
             onClick={() => {
-              const name = player.full_name ?? player.user_metadata?.full_name ?? 'this player'
+              const name = player.full_name ?? 'this player'
               if (!window.confirm(`Challenge ${name}? Are you sure you want to send this challenge?`)) return
               handleChallenge(player.id)
             }}

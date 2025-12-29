@@ -3,6 +3,7 @@
 
 import LadderListItem from './LadderListItem'
 import { Card } from '@/components/ui/card'
+import { Sport, PlayerProfile, RankedPlayerProfile } from '@/lib/types'
 
 export default function LadderList({
   sports,
@@ -12,9 +13,9 @@ export default function LadderList({
   submitting,
   handleChallenge,
 }: {
-  sports: any[]
-  topLists: Record<string, any[]>
-  challengeLists: Record<string, any[]>
+  sports: Sport[]
+  topLists: Record<string, PlayerProfile[]>
+  challengeLists: Record<string, RankedPlayerProfile[]>
   loadingLists: boolean
   submitting: boolean
   handleChallenge: (sportId: string, opponentProfileId: string) => void

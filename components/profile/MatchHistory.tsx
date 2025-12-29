@@ -3,13 +3,14 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { MatchHistoryItem } from '@/lib/types'
 
 const statusMap: Record<string, string> = {
   PENDING: 'Pending',
   CHALLENGED: 'Challenged',
 }
 
-const getMatchStatus = (match: any) => {
+const getMatchStatus = (match: MatchHistoryItem) => {
   if (match.result === 'win') return 'Won'
   if (match.result === 'loss') return 'Lost'
   return statusMap[match.status] || match.status
@@ -26,13 +27,13 @@ const getBadgeVariant = (status: string) => {
   }
 }
 
-export default function MatchHistory({ matches }: { matches: any[] }) {
+export default function MatchHistory({ matches }: { matches: MatchHistoryItem[] | undefined }) {
   return (
     <div>
       <h4 className="font-semibold mb-2">Recent Matches</h4>
       {matches && matches.length > 0 ? (
         <ul className="space-y-2">
-          {matches.map((m: any) => {
+          {matches.map((m) => {
             const status = getMatchStatus(m)
             return (
               <li key={m.id} className="flex items-center justify-between text-sm">

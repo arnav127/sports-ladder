@@ -1,8 +1,10 @@
 
 'use client'
 
+import { RankedPlayerProfile, Sport } from '@/lib/types'
 import RankingsTableRow from './RankingsTableRow'
 import { Table, TableBody, TableCaption, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { User } from '@supabase/supabase-js'
 
 export default function RankingsTable({
   players,
@@ -14,13 +16,13 @@ export default function RankingsTable({
   user,
   playerRefs,
 }: {
-  players: any[]
+  players: RankedPlayerProfile[]
   ranks: number[]
   challengables: Set<string>
   submittingChallenge: string | null
   handleChallenge: (opponentProfileId: string) => void
-  selectedSport: any
-  user: any
+  selectedSport: Sport | null
+  user: User
   playerRefs: React.RefObject<HTMLTableRowElement>[]
 }) {
   return (

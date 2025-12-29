@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { inngest } from '@/lib/inngest/client'
+import { Match } from '@/lib/types'
 
 async function handleResultSubmission(
   origin: string,
@@ -15,7 +16,7 @@ async function handleResultSubmission(
   const supabase = await createClient()
   const matchRes = await supabase.from('matches').select('*').eq('id', id).limit(1).single()
   if (!matchRes.data) return NextResponse.json({ error: 'Match not found' }, { status: 404 })
-  const match = matchRes.data as any
+  const match = matchRes.data as Match
 
   if (token) {
     // If a token is provided, it must match the match's action_token
@@ -47,7 +48,7 @@ async function handleResultSubmission(
   return NextResponse.redirect(origin, { status: 303 })
 }
 
-export async function GET(req: Request, { params }: any) {
+export async function GET(req: Request, { params }:  { params: Promise<{ id: string }> }) {
   return new NextResponse(
     `<html>
       <head><title>Submit Result</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
@@ -65,7 +66,7 @@ export async function GET(req: Request, { params }: any) {
   )
 }
 
-export async function POST(req: Request, { params }: any) {
+export async function POST(req: Request, { params }:  { params: Promise<{ id: string }> }) {
   // await the params object in case it's a Promise (Next.js App Router)
   const { id } = (await params) as { id: string }
 

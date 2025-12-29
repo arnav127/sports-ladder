@@ -3,8 +3,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts'
+import { RatingHistoryItem } from '@/lib/types'
 
-export default function RatingHistory({ ratingHistory }: { ratingHistory: any[] }) {
+export default function RatingHistory({ ratingHistory }: { ratingHistory: RatingHistoryItem[] | undefined }) {
   if (!ratingHistory || ratingHistory.length === 0) return null
 
   const data = ratingHistory.map(h => ({

@@ -8,12 +8,13 @@ import useLadders from '@/lib/hooks/useLadders'
 import RankingsTable from '@/components/rankings/RankingsTable'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Sport, RankedPlayerProfile } from '@/lib/types'
 
 export default function LadderPage() {
   const { user, loading } = useUser()
   const { sports, getPlayersForSport, getUserProfileForSport, createChallenge } = useLadders()
-  const [players, setPlayers] = useState<any[]>([])
-  const [selectedSport, setSelectedSport] = useState<any | null>(null)
+  const [players, setPlayers] = useState<RankedPlayerProfile[]>([])
+  const [selectedSport, setSelectedSport] = useState<Sport | null>(null)
   const [challengables, setChallengables] = useState<Set<string>>(new Set())
   const [submittingChallenge, setSubmittingChallenge] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -36,7 +37,7 @@ export default function LadderPage() {
     let cancelled = false
 
     ;(async () => {
-      const p = await getPlayersForSport(selectedSport.id)
+      const p = await getPlayersForSport(selectedSport.id) as RankedPlayerProfile[]
       if (cancelled) return
       setPlayers(p)
 
@@ -72,7 +73,7 @@ export default function LadderPage() {
       const myIndex = p.findIndex(pp => pp.user_id === user.id || pp.id === myProfile.id)
       const myRank = myIndex >= 0 ? ranks[myIndex] : null
 
-      let challengableArr: any[] = []
+      let challengableArr: RankedPlayerProfile[] = []
       if (myRank) {
         if (myRank <= 10) {
           challengableArr = p
@@ -152,7 +153,7 @@ export default function LadderPage() {
       setMessage('Challenge sent!')
 
       // refresh players and challengables
-      const p = await getPlayersForSport(selectedSport.id)
+      const p = await getPlayersForSport(selectedSport.id) as RankedPlayerProfile[]
       setPlayers(p)
 
       // recompute ranks and challengables (same logic as above)
@@ -175,7 +176,7 @@ export default function LadderPage() {
 
       const myIndex = p.findIndex(pp => pp.user_id === user.id || pp.id === myProfile.id)
       const myRank = myIndex >= 0 ? ranks2[myIndex] : null
-      let challengableArr: any[] = []
+      let challengableArr: RankedPlayerProfile[] = []
       if (myRank) {
         if (myRank <= 10) {
           challengableArr = p
@@ -192,8 +193,8 @@ export default function LadderPage() {
       }
 
       setChallengables(new Set(challengableArr.map(x => x.id)))
-    } catch (err: any) {
-      setMessage(err?.message || 'Unable to create challenge')
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : 'Unable to create challenge')
     } finally {
       setSubmittingChallenge(null)
     }

@@ -1,7 +1,17 @@
 'use server'
 import { supabase } from '@/lib/supabase/client'
+import {
+  Match,
+  PlayerProfile,
+  MatchHistoryItem,
+  PlayerStats,
+  PendingChallengeItem,
+  RankInfo,
+  RatingHistoryItem,
+  MatchResult,
+} from '@/lib/types'
 
-export async function getMatchesForProfile(profileId: string, limit = 5) {
+export async function getMatchesForProfile(profileId: string, limit = 5): Promise<MatchHistoryItem[]> {
   // Fetch matches (player ids only) then resolve full_name/avatar via player_profiles_view
   const { data } = await supabase
     .from('matches')
@@ -12,51 +22,55 @@ export async function getMatchesForProfile(profileId: string, limit = 5) {
 
   if (!data) return []
 
+  const matches = data as Match[]
+
   // collect unique profile ids referenced in these matches
-  const ids = Array.from(new Set(data.flatMap((m: any) => [m.player1_id, m.player2_id].filter(Boolean))))
-  const profilesMap: Record<string, any> = {}
+  const ids = Array.from(new Set(matches.flatMap((m) => [m.player1_id, m.player2_id].filter(Boolean)))) as string[]
+  const profilesMap: Record<string, PlayerProfile> = {}
   if (ids.length) {
     const { data: profiles } = await supabase
       .from('player_profiles_view')
       .select('id, full_name, avatar_url, rating')
-      .in('id', ids as any)
-    ;(profiles || []).forEach((p: any) => { profilesMap[p.id] = p })
+      .in('id', ids)
+    ;(profiles as PlayerProfile[] || []).forEach((p) => {
+      profilesMap[p.id] = p
+    })
   }
 
   const finalStatuses = ['CONFIRMED', 'PROCESSED']
 
-  return data.map((m: any) => {
+  return matches.map((m) => {
     const isPlayer1 = m.player1_id === profileId
     const opponentId = isPlayer1 ? m.player2_id : m.player1_id
     const opponent = opponentId ? profilesMap[opponentId] : null
-    const result = finalStatuses.includes(m.status) ? (m.winner_id === profileId ? 'win' : 'loss') : m.status
+    const result: MatchResult = finalStatuses.includes(m.status) ? (m.winner_id === profileId ? 'win' : 'loss') : null
     return {
       id: m.id,
-      sport_id: m.sport_id,
-      opponent: opponent ? { id: opponent.id, full_name: opponent.full_name, rating: opponent.rating, avatar_url: opponent.avatar_url } : null,
+      created_at: m.created_at,
       status: m.status,
       result,
-      created_at: m.created_at
+      opponent: opponent ? { id: opponent.id, full_name: opponent.full_name, avatar_url: opponent.avatar_url } : null,
     }
   })
 }
 
-export async function getProfileStats(profileId: string) {
+export async function getProfileStats(profileId: string): Promise<PlayerStats> {
   const { data } = await supabase
     .from('matches')
     .select('id, winner_id, status')
     .or(`player1_id.eq.${profileId},player2_id.eq.${profileId}`)
 
+  const matches = (data as Pick<Match, 'id' | 'winner_id' | 'status'>[]) || []
   const finalStatuses = ['CONFIRMED', 'PROCESSED']
-  const finished = (data || []).filter((m: any) => finalStatuses.includes(m.status))
-  const wins = finished.filter((m: any) => m.winner_id === profileId).length
+  const finished = matches.filter((m) => finalStatuses.includes(m.status))
+  const wins = finished.filter((m) => m.winner_id === profileId).length
   const losses = finished.length - wins
   const total = finished.length
-  const winRate = total > 0 ? Math.round((wins / total) * 100) : null
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 0
   return { total, wins, losses, winRate }
 }
 
-export async function getPendingChallengesForProfile(profileId: string) {
+export async function getPendingChallengesForProfile(profileId: string): Promise<PendingChallengeItem[]> {
   // Fetch matches (player ids only) then resolve names via player_profiles_view
   const { data } = await supabase
     .from('matches')
@@ -67,33 +81,49 @@ export async function getPendingChallengesForProfile(profileId: string) {
 
   if (!data) return []
 
+  const matches = data as Match[]
+
   // resolve player names/avatars (include reported_by in the id list)
-  const ids = Array.from(new Set(data.flatMap((m: any) => [m.player1_id, m.player2_id, m.reported_by].filter(Boolean))))
-  const profilesMap: Record<string, any> = {}
+  const ids = Array.from(new Set(matches.flatMap((m) => [m.player1_id, m.player2_id, m.reported_by].filter(Boolean)))) as string[]
+  const profilesMap: Record<string, PlayerProfile> = {}
   if (ids.length) {
     const { data: profiles } = await supabase
       .from('player_profiles_view')
       .select('id, full_name, avatar_url, rating')
-      .in('id', ids as any)
-    ;(profiles || []).forEach((p: any) => { profilesMap[p.id] = p })
+      .in('id', ids)
+    ;(profiles as PlayerProfile[] || []).forEach((p) => {
+      profilesMap[p.id] = p
+    })
   }
 
-  return (data || []).map((m: any) => ({
-    ...m,
-    player1_id: m.player1_id ? { id: m.player1_id, full_name: profilesMap[m.player1_id]?.full_name, avatar_url: profilesMap[m.player1_id]?.avatar_url, rating: profilesMap[m.player1_id]?.rating } : null,
-    player2_id: m.player2_id ? { id: m.player2_id, full_name: profilesMap[m.player2_id]?.full_name, avatar_url: profilesMap[m.player2_id]?.avatar_url, rating: profilesMap[m.player2_id]?.rating } : null,
-    reported_by: m.reported_by ? { id: m.reported_by, full_name: profilesMap[m.reported_by]?.full_name, avatar_url: profilesMap[m.reported_by]?.avatar_url, rating: profilesMap[m.reported_by]?.rating } : null
+  return matches.map((m) => ({
+    id: m.id,
+    sport_id: m.sport_id,
+    status: m.status,
+    message: m.message,
+    action_token: m.action_token,
+    winner_id: m.winner_id,
+    created_at: m.created_at,
+    player1_id: m.player1_id
+      ? { id: m.player1_id, full_name: profilesMap[m.player1_id]?.full_name, avatar_url: profilesMap[m.player1_id]?.avatar_url }
+      : { id: 'unknown' },
+    player2_id: m.player2_id
+      ? { id: m.player2_id, full_name: profilesMap[m.player2_id]?.full_name, avatar_url: profilesMap[m.player2_id]?.avatar_url }
+      : { id: 'unknown' },
+    reported_by: m.reported_by
+      ? { id: m.reported_by, full_name: profilesMap[m.reported_by]?.full_name, avatar_url: profilesMap[m.reported_by]?.avatar_url }
+      : null,
   }))
 }
 
-export async function getRankForProfile(profileId: string, sportId: string) {
+export async function getRankForProfile(profileId: string, sportId: string): Promise<RankInfo> {
   const { data } = await supabase
     .from('player_profiles_view')
     .select('id, rating')
     .eq('sport_id', sportId)
     .order('rating', { ascending: false })
 
-  const players = data || []
+  const players = (data as Pick<PlayerProfile, 'id' | 'rating'>[]) || []
   const ranks: number[] = []
   let lastRank = 0
   for (let i = 0; i < players.length; i++) {
@@ -104,12 +134,12 @@ export async function getRankForProfile(profileId: string, sportId: string) {
     }
   }
 
-  const idx = players.findIndex((p: any) => p.id === profileId)
+  const idx = players.findIndex((p) => p.id === profileId)
   if (idx === -1) return { rank: null, total: players.length }
   return { rank: ranks[idx], total: players.length }
 }
 
-export async function getRatingHistory(profileId: string, limit = 100) {
+export async function getRatingHistory(profileId: string, limit = 100): Promise<RatingHistoryItem[]> {
   const { data } = await supabase
     .from('ratings_history')
     .select('id, match_id, old_rating, new_rating, delta, reason, created_at')
@@ -117,5 +147,8 @@ export async function getRatingHistory(profileId: string, limit = 100) {
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  return data || []
+  return ((data as { created_at: string; new_rating: number }[]) || []).map((item) => ({
+    created_at: item.created_at,
+    new_rating: item.new_rating,
+  }))
 }

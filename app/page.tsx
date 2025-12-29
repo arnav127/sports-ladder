@@ -10,19 +10,20 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import PendingChallenges from '@/components/profile/PendingChallenges'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PlayerProfile, RankedPlayerProfile, PendingChallengeItem, Sport } from '@/lib/types'
 
 export default function Home() {
   const { user, loading } = useUser()
-  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getPendingChallengesForUser } = useLadders()
+  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getPendingChallengesForUser, getAllPlayers, getUserProfiles } = useLadders()
   const [sportId, setSportId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const [topLists, setTopLists] = useState<Record<string, any[]>>({})
-  const [challengeLists, setChallengeLists] = useState<Record<string, any[]>>({})
+  const [topLists, setTopLists] = useState<Record<string, PlayerProfile[]>>({})
+  const [challengeLists, setChallengeLists] = useState<Record<string, RankedPlayerProfile[]>>({})
   const [loadingLists, setLoadingLists] = useState(false)
-  const [pendingChallenges, setPendingChallenges] = useState<any[]>([])
+  const [pendingChallenges, setPendingChallenges] = useState<PendingChallengeItem[]>([])
   const [userProfileIds, setUserProfileIds] = useState<string[]>([])
-  const [unjoinedSports, setUnjoinedSports] = useState<any[]>([])
+  const [unjoinedSports, setUnjoinedSports] = useState<Sport[]>([])
   const router = useRouter()
   const userId = user?.id
 
@@ -34,15 +35,20 @@ export default function Home() {
   useEffect(() => {
     async function loadLists() {
       setLoadingLists(true)
-      const tops: Record<string, any[]> = {}
-      const challengables: Record<string, any[]> = {}
+      const tops: Record<string, PlayerProfile[]> = {}
+      const challengables: Record<string, RankedPlayerProfile[]> = {}
+
+      const [allPlayers, myProfiles] = await Promise.all([
+        getAllPlayers(),
+        userId ? getUserProfiles(userId) : Promise.resolve([]),
+      ])
 
       for (const s of sports) {
-        const players = await getPlayersForSport(s.id) // fetch full list
+        const players = allPlayers.filter((p) => p.sport_id === s.id)
         tops[s.id] = players.slice(0, 5)
 
         if (userId) {
-          const myProfile = await getUserProfileForSport(userId, s.id)
+          const myProfile = myProfiles.find((p) => p.sport_id === s.id)
           if (myProfile) {
             // compute ranks with ties (same algorithm as ladder page)
             const ranks: number[] = []
@@ -66,7 +72,7 @@ export default function Home() {
             const myRank = myIndex >= 0 ? ranks[myIndex] : null
 
             if (myRank) {
-              let challengable: any[] = []
+              let challengable: RankedPlayerProfile[] = []
 
               // If the user is in the top 10, they can challenge any of the top 10 players
               if (myRank <= 10) {
@@ -104,15 +110,15 @@ export default function Home() {
         try {
           const { supabase } = await import('@/lib/supabase/client')
           const { data: profiles } = await supabase.from('player_profiles').select('id, sport_id').eq('user_id', userId)
-          const profileIds = (profiles || []).map((p: any) => p.id)
+          const profileIds = (profiles || []).map((p: { id: string }) => p.id)
           setUserProfileIds(profileIds)
 
           if (profileIds.length > 0) {
-            const pending = await getPendingChallengesForUser(userId)
+            const pending = await getPendingChallengesForUser(userId) as PendingChallengeItem[]
             setPendingChallenges(pending)
           }
 
-          const joinedSportIds = (profiles || []).map((p: any) => p.sport_id)
+          const joinedSportIds = (profiles || []).map((p: { sport_id: string }) => p.sport_id)
           setUnjoinedSports(sports.filter(s => !joinedSportIds.includes(s.id)))
         } catch (e) {
           console.error('Error loading user profiles or pending challenges:', e)
@@ -127,7 +133,7 @@ export default function Home() {
     }
 
     if (sports.length > 0) loadLists()
-  }, [sports, userId, getPlayersForSport, getUserProfileForSport, getPendingChallengesForUser])
+  }, [sports, userId, getPlayersForSport, getUserProfileForSport, getPendingChallengesForUser, getAllPlayers, getUserProfiles])
 
   async function join() {
     if (!user) {
@@ -205,7 +211,7 @@ export default function Home() {
       const myIndex = players.findIndex(p => p.user_id === user.id || p.id === myProfile.id)
       const myRank = myIndex >= 0 ? ranks[myIndex] : null
       if (myRank) {
-        let challengable: any[] = []
+        let challengable: RankedPlayerProfile[] = []
         if (myRank <= 10) {
           challengable = players
             .map((p, i) => ({ ...p, rank: ranks[i] }))
@@ -220,8 +226,8 @@ export default function Home() {
         }
         setChallengeLists(prev => ({ ...prev, [sportId]: challengable }))
       }
-    } catch (err: any) {
-      setMessage(err?.message || 'Unable to create challenge')
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : 'Unable to create challenge')
     } finally {
       setSubmitting(false)
     }

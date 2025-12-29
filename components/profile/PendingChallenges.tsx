@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { PendingChallengeItem } from '@/lib/types'
 
 const statusMap: Record<string, string> = {
   PENDING: 'Pending',
@@ -12,7 +13,7 @@ const statusMap: Record<string, string> = {
   PROCESSING: 'Processing',
 }
 
-const getMatchStatus = (match: any) => {
+const getMatchStatus = (match: PendingChallengeItem) => {
   if (match.result === 'win') return 'Won'
   if (match.result === 'loss') return 'Lost'
   return statusMap[match.status] || match.status
@@ -36,7 +37,7 @@ export default function PendingChallenges({
   currentUserIds,
   onAction = () => window.location.reload(),
 }: {
-  challenges: any[]
+  challenges: PendingChallengeItem[] | undefined
   currentUserIds: string[]
   onAction?: () => void
 }) {
@@ -49,7 +50,7 @@ export default function PendingChallenges({
         <CardDescription>Challenges that require your attention.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {challenges.map((c: any) => {
+        {challenges.map((c) => {
           const status = getMatchStatus(c)
           const myProfileId = currentUserIds.find(id => id === c.player1_id?.id || id === c.player2_id?.id)
 

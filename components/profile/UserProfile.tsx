@@ -4,8 +4,10 @@
 import PlayerProfile from './PlayerProfile'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { User } from '@supabase/supabase-js'
+import { PlayerProfileExtended } from '@/lib/types'
 
-export default function UserProfile({ user, myPlayers }: { user: any; myPlayers: any[] }) {
+export default function UserProfile({ user, myPlayers }: { user: User; myPlayers: PlayerProfileExtended[] }) {
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center gap-4">
@@ -24,7 +26,7 @@ export default function UserProfile({ user, myPlayers }: { user: any; myPlayers:
           <p className="text-muted-foreground">You don&apost have any player profiles yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {myPlayers.map((p: any) => (
+            {myPlayers.map((p) => (
               <div key={p.id} className="flex-1 min-w-full md:min-w-[500px]">
                 <PlayerProfile player={p} />
               </div>

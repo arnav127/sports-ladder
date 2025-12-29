@@ -6,11 +6,12 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from "next-themes"
 import { Button } from './ui/button'
 import { Moon, Sun, Monitor, Menu, X } from "lucide-react"
+import { User } from '@supabase/supabase-js'
 
 export default function Header() {
   const router = useRouter()
   const pathname = usePathname()
-  const [user, setUser] = useState<any | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
