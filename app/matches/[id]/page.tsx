@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import MatchResultForm from '@/components/matches/MatchResultForm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type Props = { params: { id: string } }

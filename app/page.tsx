@@ -38,12 +38,12 @@ export default function Home() {
     // load recent matches for home page
     async function loadRecent() {
       try {
-        const res = await fetch('/api/matches/recent?limit=5')
-        if (res.ok) {
-          const data = await res.json()
-          setRecentMatches(data)
-        }
-      } catch (e) {}
+        const data = await getRecentMatches(5)
+        setRecentMatches(data || [])
+      } catch (e) {
+        console.error('Failed to load recent matches', e)
+        setRecentMatches([])
+      }
     }
     loadRecent()
 
