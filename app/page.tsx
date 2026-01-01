@@ -15,7 +15,7 @@ import { PlayerProfile, RankedPlayerProfile, PendingChallengeItem, Sport } from 
 
 export default function Home() {
   const { user, loading } = useUser()
-  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getPendingChallengesForUser, getAllPlayers, getUserProfiles } = useLadders()
+  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getPendingChallengesForUser, getRecentMatches, getAllPlayers, getUserProfiles } = useLadders()
   const [sportId, setSportId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)

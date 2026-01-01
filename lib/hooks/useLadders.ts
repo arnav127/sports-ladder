@@ -215,5 +215,5 @@ export default function useLadders() {
     return (data as PlayerProfile[]) ?? []
   }, [])
 
-  return { sports, getPlayersForSport, getUserProfileForSport, createChallenge, createMatch, getMatchesForProfile, getRecentMatchesForProfiles, getProfileStats, getRankForProfile, getPendingChallengesForUser, getAllPlayers, getUserProfiles }
+  return { sports, getPlayersForSport, getUserProfileForSport, createChallenge, createMatch, getMatchesForProfile, getRecentMatches, getRecentMatchesForProfiles, getProfileStats, getRankForProfile, getPendingChallengesForUser, getAllPlayers, getUserProfiles }
 }
