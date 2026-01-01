@@ -45,7 +45,7 @@ export default async function MatchHistoryPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-semibold">{profilesMap[m.player1_id]?.full_name ?? 'Player 1'} vs {profilesMap[m.player2_id]?.full_name ?? 'Player 2'}</div>
-                    <div className="text-sm text-muted-foreground">{m.sport_name ?? 'Sport'} • {m.status} • {new Date(m.created_at).toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">{m.sport_name ?? 'Sport'} • {new Date(m.created_at).toLocaleString()}</div>
                   </div>
                   <div className="text-right text-sm text-muted-foreground">No actions from this page</div>
                 </div>
@@ -67,7 +67,7 @@ export default async function MatchHistoryPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <Link href={`/matches/${m.id}`} className="font-semibold">{profilesMap[m.player1_id]?.full_name ?? 'Player 1'} vs {profilesMap[m.player2_id]?.full_name ?? 'Player 2'}</Link>
-                    <div className="text-sm text-muted-foreground">{m.sport_name ?? 'Sport'} • {m.status} • {new Date(m.created_at).toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">{m.sport_name ?? 'Sport'} • {new Date(m.created_at).toLocaleString()}</div>
                   </div>
                   <div className="text-right">
                     {m.winner_id ? <span>Winner: {profilesMap[m.winner_id]?.full_name ?? m.winner_id}</span> : <span className="text-sm text-muted-foreground">No result</span>}
