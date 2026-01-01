@@ -17,7 +17,7 @@ The project works with supabase and inngest.
 Make sure to add the following env vars before running the server:
 
 
-```
+```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
@@ -27,6 +27,11 @@ FROM_EMAIL=
 INNGEST_EVENT_KEY=
 INNGEST_SIGNING_KEY=
 PUBLIC_SITE_URL=
+```
+
+Start inngest local server with
+```bash
+npx --ignore-scripts=false inngest-cli@latest dev
 ```
 
 Stages:
