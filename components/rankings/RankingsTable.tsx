@@ -15,6 +15,7 @@ export default function RankingsTable({
   selectedSport,
   user,
   playerRefs,
+  recentMap,
 }: {
   players: RankedPlayerProfile[]
   ranks: number[]
@@ -24,6 +25,7 @@ export default function RankingsTable({
   selectedSport: Sport | null
   user: User
   playerRefs: React.RefObject<HTMLTableRowElement>[]
+  recentMap?: Record<string, any[]>
 }) {
   return (
     <Table>
@@ -49,6 +51,7 @@ export default function RankingsTable({
             handleChallenge={handleChallenge}
             selectedSport={selectedSport}
             user={user}
+            recentMatches={recentMap?.[p.id]}
           />
         ))}
       </TableBody>

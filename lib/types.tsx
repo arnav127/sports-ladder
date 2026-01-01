@@ -47,6 +47,11 @@ export type MatchHistoryItem = {
   created_at: string
   status: string
   result?: MatchResult
+  sport_id?: string
+  sport_name?: string
+  player1_id?: string | null
+  player2_id?: string | null
+  winner_id?: string | null
   opponent?: {
     id: string
     full_name?: string

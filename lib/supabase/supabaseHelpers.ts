@@ -12,17 +12,17 @@ import {
 } from '@/lib/types'
 
 export async function getMatchesForProfile(profileId: string, limit = 5): Promise<MatchHistoryItem[]> {
-  // Fetch matches (player ids only) then resolve full_name/avatar via player_profiles_view
+  // Fetch matches (include sport name via relation) then resolve full_name/avatar via player_profiles_view
   const { data } = await supabase
     .from('matches')
-    .select('id, sport_id, player1_id, player2_id, winner_id, status, created_at')
+    .select('id, sport_id, player1_id, player2_id, winner_id, status, created_at, sports(id, name)')
     .or(`player1_id.eq.${profileId},player2_id.eq.${profileId}`)
     .order('created_at', { ascending: false })
     .limit(limit)
 
   if (!data) return []
 
-  const matches = data as Match[]
+  const matches = data as any[]
 
   // collect unique profile ids referenced in these matches
   const ids = Array.from(new Set(matches.flatMap((m) => [m.player1_id, m.player2_id].filter(Boolean)))) as string[]
@@ -48,6 +48,8 @@ export async function getMatchesForProfile(profileId: string, limit = 5): Promis
       id: m.id,
       created_at: m.created_at,
       status: m.status,
+      sport_id: m.sport_id,
+      sport_name: (m.sports && (m.sports as any).name) || null,
       result,
       opponent: opponent ? { id: opponent.id, full_name: opponent.full_name, avatar_url: opponent.avatar_url } : null,
     }

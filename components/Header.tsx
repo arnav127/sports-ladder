@@ -49,6 +49,7 @@ export default function Header() {
         <Link href="/" className="scroll-m-20 text-center text-3xl md:text-4xl font-extrabold tracking-tight text-balance text-shadow-sm">IIMA Sports Ladder</Link>
         <nav className="hidden md:flex items-center gap-4">
           <Link href="/ladder" className="scroll-m-20 text-2xl mt-1 font-bold tracking-tight text-shadow-sm">Ladders</Link>
+          <Link href="/match-history" className="scroll-m-20 text-2xl mt-1 font-bold tracking-tight text-shadow-sm">Matches</Link>
           {user && (
             <Link href="/profile" className="scroll-m-20 text-2xl mt-1 font-bold tracking-tight text-shadow-sm">Profile</Link>
           )}
@@ -74,6 +75,7 @@ export default function Header() {
         <div className="md:hidden border-t px-4 py-4 space-y-4 bg-background">
           <nav className="flex flex-col gap-4">
             <Link href="/ladder" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold">Ladders</Link>
+            <Link href="/match-history" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold">Matches</Link>
             {user ? (
               <>
                 <Link href="/profile" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold">Profile</Link>

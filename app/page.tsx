@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import useUser from '@/lib/hooks/useUser'
 import useLadders from '@/lib/hooks/useLadders'
 import LadderList from '@/components/ladders/LadderList'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -14,7 +15,7 @@ import { PlayerProfile, RankedPlayerProfile, PendingChallengeItem, Sport } from 
 
 export default function Home() {
   const { user, loading } = useUser()
-  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getPendingChallengesForUser, getAllPlayers, getUserProfiles } = useLadders()
+  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getPendingChallengesForUser, getRecentMatches, getAllPlayers, getUserProfiles } = useLadders()
   const [sportId, setSportId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -24,6 +25,7 @@ export default function Home() {
   const [pendingChallenges, setPendingChallenges] = useState<PendingChallengeItem[]>([])
   const [userProfileIds, setUserProfileIds] = useState<string[]>([])
   const [unjoinedSports, setUnjoinedSports] = useState<Sport[]>([])
+  const [recentMatches, setRecentMatches] = useState<any[]>([])
   const router = useRouter()
   const userId = user?.id
 
@@ -33,6 +35,18 @@ export default function Home() {
 
   // fetch top 5 and challengable lists for each sport
   useEffect(() => {
+    // load recent matches for home page
+    async function loadRecent() {
+      try {
+        const data = await getRecentMatches(5)
+        setRecentMatches(data || [])
+      } catch (e) {
+        console.error('Failed to load recent matches', e)
+        setRecentMatches([])
+      }
+    }
+    loadRecent()
+
     async function loadLists() {
       setLoadingLists(true)
       const tops: Record<string, PlayerProfile[]> = {}
@@ -283,6 +297,31 @@ export default function Home() {
       </aside>
 
       <main className="md:col-span-2 space-y-6">
+        <section>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Recent Matches</h2>
+            <Link href="/match-history" className="text-sm text-muted-foreground">View full history</Link>
+          </div>
+          <div className="mt-3 space-y-2">
+            {recentMatches.length === 0 && <p className="text-sm text-muted-foreground">No recent matches</p>}
+            {recentMatches.map((m) => (
+              <div key={m.id} className="p-3 border rounded flex justify-between items-center">
+                <div>
+                  <Link href={`/matches/${m.id}`} className="font-medium">{m.player1?.full_name ?? 'Player 1'} vs {m.player2?.full_name ?? 'Player 2'}</Link>
+                  <div className="text-sm text-muted-foreground">{sports.find(s => s.id === m.sport_id)?.name ?? 'Sport'} • {m.status} • {new Date(m.created_at).toLocaleString()}</div>
+                </div>
+                <div className="text-sm">
+                  {m.winner_id ? (
+                    <span className="text-emerald-600 font-medium">Winner: { (m.player1?.id === m.winner_id ? m.player1?.full_name : m.player2?.id === m.winner_id ? m.player2?.full_name : m.winner_id) }</span>
+                  ) : (
+                    <span className="text-muted-foreground">No result</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {sports.length > 0 ? (
           <Tabs defaultValue={sports[0].id} className="w-full">
             <TabsList className='shadow-sm'>

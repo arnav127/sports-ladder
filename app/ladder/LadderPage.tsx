@@ -12,8 +12,9 @@ import { Sport, RankedPlayerProfile } from '@/lib/types'
 
 export default function LadderPage() {
   const { user, loading } = useUser()
-  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge } = useLadders()
+  const { sports, getPlayersForSport, getUserProfileForSport, createChallenge, getRecentMatchesForProfiles } = useLadders()
   const [players, setPlayers] = useState<RankedPlayerProfile[]>([])
+  const [recentMap, setRecentMap] = useState<Record<string, any[]>>({})
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null)
   const [challengables, setChallengables] = useState<Set<string>>(new Set())
   const [submittingChallenge, setSubmittingChallenge] = useState<string | null>(null)
@@ -40,6 +41,14 @@ export default function LadderPage() {
       const p = await getPlayersForSport(selectedSport.id) as RankedPlayerProfile[]
       if (cancelled) return
       setPlayers(p)
+
+      try {
+        const ids = p.map(x => x.id)
+        const map = await getRecentMatchesForProfiles(ids, 3)
+        if (!cancelled) setRecentMap(map)
+      } catch (e) {
+        // ignore
+      }
 
       // compute ranks (standard competition ranking)
       const ranks: number[] = []
@@ -253,6 +262,7 @@ export default function LadderPage() {
                 selectedSport={selectedSport}
                 user={user}
                 playerRefs={playerRefs}
+                recentMap={recentMap}
               />
             ) : (
               <p className="text-muted-foreground">Choose a sport to view its ladder.</p>
